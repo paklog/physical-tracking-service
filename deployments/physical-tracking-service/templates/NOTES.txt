@@ -1,0 +1,56 @@
+1. Get the application URL by running these commands:
+{{- if .Values.gateway.enabled }}
+  The service is accessible via Gateway API at:
+  {{- if .Values.gateway.tls.enabled }}
+  https://{{ .Values.gateway.hostname }}{{ .Values.gateway.pathPrefix }}
+  {{- else }}
+  http://{{ .Values.gateway.hostname }}{{ .Values.gateway.pathPrefix }}
+  {{- end }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "physical-tracking-service.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8085 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8085:$CONTAINER_PORT
+{{- end }}
+
+2. API Endpoints available:
+   - License Plates:
+     * GET/POST {{ .Values.gateway.pathPrefix }}/license-plates
+     * GET/DELETE {{ .Values.gateway.pathPrefix }}/license-plates/{lpn}
+     * POST {{ .Values.gateway.pathPrefix }}/license-plates/search
+     * POST/DELETE {{ .Values.gateway.pathPrefix }}/license-plates/{lpn}/items
+     * POST {{ .Values.gateway.pathPrefix }}/license-plates/{lpn}/move
+     * GET {{ .Values.gateway.pathPrefix }}/license-plates/{lpn}/movements
+
+   - Locations:
+     * GET/PUT {{ .Values.gateway.pathPrefix }}/locations/{locationId}/state
+     * GET {{ .Values.gateway.pathPrefix }}/locations/{locationId}/contents
+
+   - Movements:
+     * GET {{ .Values.gateway.pathPrefix }}/movements
+
+   - RTLS:
+     * POST {{ .Values.gateway.pathPrefix }}/rtls/positions
+     * GET {{ .Values.gateway.pathPrefix }}/rtls/assets/{assetId}/position
+
+   - Audit:
+     * GET {{ .Values.gateway.pathPrefix }}/audit/movements/by-product
+
+   - Metrics:
+     * GET {{ .Values.gateway.pathPrefix }}/metrics/location-utilization
+
+3. Health check endpoints:
+   * GET {{ .Values.gateway.pathPrefix }}/actuator/health
+   * GET {{ .Values.gateway.pathPrefix }}/actuator/health/liveness
+   * GET {{ .Values.gateway.pathPrefix }}/actuator/health/readiness
+
+4. To check the deployment status:
+   kubectl get deployment --namespace {{ .Release.Namespace }} {{ include "physical-tracking-service.fullname" . }}
+
+5. To view logs:
+   kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "physical-tracking-service.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+{{- if .Values.httpRoute.enabled }}
+
+6. Gateway API HTTPRoute has been configured. Ensure your Gateway ({{ .Values.gateway.gatewayRef.name }}) is properly set up and running.
+{{- end }}

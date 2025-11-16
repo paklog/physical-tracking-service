@@ -1,0 +1,150 @@
+# Default values for physical-tracking-service
+replicaCount: 2
+
+image:
+  repository: paklog/physical-tracking-service
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8085
+
+# Kubernetes Gateway API configuration
+gateway:
+  enabled: true
+  # Reference to existing Gateway
+  gatewayRef:
+    name: main-gateway
+    namespace: ""  # Leave empty to use release namespace
+  # Hostname for the service
+  hostname: "physical-tracking.paklog.com"
+  # Path prefix for all routes
+  pathPrefix: ""
+  # TLS configuration
+  tls:
+    enabled: true
+    certificateRef:
+      name: physical-tracking-tls
+      namespace: ""
+
+# HTTPRoute configuration for Gateway API
+httpRoute:
+  enabled: true
+  annotations: {}
+  # Timeout for backend requests
+  timeoutSeconds: 30
+  # Retry configuration
+  retries:
+    attempts: 3
+    backoff: "100ms"
+  # Rate limiting (if supported by gateway implementation)
+  rateLimit:
+    enabled: false
+    requestsPerSecond: 100
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application configuration
+config:
+  server:
+    port: 8085
+  database:
+    url: "jdbc:postgresql://localhost:5432/tracking"
+    username: "tracking_user"
+    pool:
+      size: 20
+      maxLifetime: 1800000
+  kafka:
+    bootstrapServers: "kafka:9092"
+    groupId: "physical-tracking-service"
+  rtls:
+    enabled: true
+    updateIntervalMs: 1000
+
+# Secrets configuration
+secrets:
+  database:
+    password: ""
+    existingSecret: ""
+    key: "password"
+  apiKey:
+    value: ""
+    existingSecret: ""
+    key: "api-key"
+
+# Health check configuration
+healthCheck:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    path: /actuator/health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /actuator/prometheus
+  labels: {}

@@ -1,0 +1,228 @@
+{{- if and .Values.gateway.enabled .Values.httpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "physical-tracking-service.fullname" . }}
+  labels:
+    {{- include "physical-tracking-service.labels" . | nindent 4 }}
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.gatewayRef.name }}
+      {{- if .Values.gateway.gatewayRef.namespace }}
+      namespace: {{ .Values.gateway.gatewayRef.namespace }}
+      {{- end }}
+  hostnames:
+    - {{ .Values.gateway.hostname | quote }}
+  rules:
+    # License Plates - List and Create
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/license-plates
+          method: GET
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/license-plates
+          method: POST
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # License Plates - Search
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/search
+          method: POST
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # License Plates - Get and Delete by LPN
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/
+          method: GET
+        - path:
+            type: PathPrefix
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/
+          method: DELETE
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # License Plates - Items management (POST and DELETE)
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/[^/]+/items
+          method: POST
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/[^/]+/items
+          method: DELETE
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # License Plates - Move
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/[^/]+/move
+          method: POST
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # License Plates - Movements history
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/license-plates/[^/]+/movements
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Locations - State
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/locations/[^/]+/state
+          method: GET
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/locations/[^/]+/state
+          method: PUT
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Locations - Contents
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/locations/[^/]+/contents
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Movements - List
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/movements
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # RTLS - Update positions
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/rtls/positions
+          method: POST
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # RTLS - Get asset position
+    - matches:
+        - path:
+            type: RegularExpression
+            value: {{ .Values.gateway.pathPrefix }}/rtls/assets/[^/]+/position
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Audit - Product movement audit
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/audit/movements/by-product
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Metrics - Location utilization
+    - matches:
+        - path:
+            type: Exact
+            value: {{ .Values.gateway.pathPrefix }}/metrics/location-utilization
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- if .Values.httpRoute.timeoutSeconds }}
+      timeouts:
+        request: {{ .Values.httpRoute.timeoutSeconds }}s
+      {{- end }}
+
+    # Health check endpoints (for direct access)
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ .Values.gateway.pathPrefix }}/actuator/health
+          method: GET
+      backendRefs:
+        - name: {{ include "physical-tracking-service.fullname" . }}
+          port: {{ .Values.service.port }}
+{{- end }}
